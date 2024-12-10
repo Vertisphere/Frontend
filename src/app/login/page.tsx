@@ -81,12 +81,12 @@ export default function Login() {
         <div className="mt-8 text-sm text-gray-500">
           <p className="text-center">
             By connecting your account, you agree to our{" "}
-            <a href="#" className="text-blue-600 hover:underline">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-blue-600 hover:underline">
+            <a href="/privacy-policy" className="text-blue-600 hover:underline">
               Privacy Policy
+            </a>
+            {" "}and{" "}
+            <a href="/eula" className="text-blue-600 hover:underline">
+              End User License Agreement
             </a>
           </p>
         </div>
