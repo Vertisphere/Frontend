@@ -1,101 +1,96 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback } from "react";
+
+const INTUIT_CONFIG = {
+  clientId: "ABRZXEqL4DpCxHz4OhdiuKg0BXaKIYf4QfVgqLdzC3SngxVNWy",
+  redirectUri: "http://localhost:3000/franchiser/oauth",
+  environment: "sandbox",
+  scope: "com.intuit.quickbooks.accounting openid profile email phone",
+  responseType: "code",
+} as const;
+
+export default function Login() {
+  const loginWithQuickbooks = useCallback(() => {
+    const state = crypto.randomUUID();
+    sessionStorage.setItem("qb_state", state);
+
+    const params = new URLSearchParams({
+      client_id: INTUIT_CONFIG.clientId,
+      redirect_uri: INTUIT_CONFIG.redirectUri,
+      response_type: INTUIT_CONFIG.responseType,
+      scope: INTUIT_CONFIG.scope,
+      state: state,
+    });
+
+    window.location.href = `https://appcenter.intuit.com/connect/oauth2/authorize?${params.toString()}`;
+  }, []);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-xl shadow-2xl">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            QuickBooks Connection
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Connect your QuickBooks account to get started
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="space-y-6">
+          <button
+            onClick={loginWithQuickbooks}
+            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium
+              hover:bg-blue-700 transform transition duration-200 hover:shadow-lg"
+          >
+            Connect to QuickBooks
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Don't have an account?
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              New to QuickBooks?
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Create a QuickBooks Online account to manage your business
+              finances and connect with our platform.
+            </p>
+            <a
+              href="https://quickbooks.intuit.com/signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full block text-center py-3 px-4 bg-green-600 text-white rounded-lg font-medium
+                hover:bg-green-700 transform transition duration-200 hover:shadow-lg"
+            >
+              Create QuickBooks Account
+            </a>
+          </div>
+        </div>
+
+        <div className="mt-8 text-sm text-gray-500">
+          <p className="text-center">
+            By connecting your account, you agree to our{" "}
+            <a href="/privacy-policy" className="text-blue-600 hover:underline">
+              Privacy Policy
+            </a>{" "}
+            and{" "}
+            <a href="/eula" className="text-blue-600 hover:underline">
+              End User License Agreement
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
