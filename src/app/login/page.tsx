@@ -1,30 +1,50 @@
 "use client";
 
-import { useCallback } from "react";
-
-const INTUIT_CONFIG = {
-  clientId: "ABRZXEqL4DpCxHz4OhdiuKg0BXaKIYf4QfVgqLdzC3SngxVNWy",
-  redirectUri: "http://localhost:3000/franchiser/oauth",
-  environment: "sandbox",
-  scope: "com.intuit.quickbooks.accounting openid profile email phone",
-  responseType: "code",
-} as const;
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
-  const loginWithQuickbooks = useCallback(() => {
-    const state = crypto.randomUUID();
-    sessionStorage.setItem("qb_state", state);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-    const params = new URLSearchParams({
-      client_id: INTUIT_CONFIG.clientId,
-      redirect_uri: INTUIT_CONFIG.redirectUri,
-      response_type: INTUIT_CONFIG.responseType,
-      scope: INTUIT_CONFIG.scope,
-      state: state,
-    });
+  const loginWithQuickbooks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://api.ordrport.com/franchiser/qbLogin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            AUTH_CODE: process.env.NEXT_PUBLIC_AUTH_CODE,
+            REALM_ID: process.env.NEXT_PUBLIC_REALM_ID,
+            use_cached_bearer: true,
+          }),
+        },
+      );
 
-    window.location.href = `https://appcenter.intuit.com/connect/oauth2/authorize?${params.toString()}`;
-  }, []);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          sessionStorage.setItem("jwt", data.token);
+          router.push("/franchiser/orders");
+        } else {
+          console.error("Authentication failed:", data);
+        }
+      } else {
+        const errorData = await response.text();
+        console.error("Failed to authenticate with QuickBooks:", errorData);
+      }
+    } catch (error) {
+      console.error("Error during authentication:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -39,13 +59,18 @@ export default function Login() {
         </div>
 
         <div className="space-y-6">
-          <button
+          <Button
             onClick={loginWithQuickbooks}
             className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium
-              hover:bg-blue-700 transform transition duration-200 hover:shadow-lg"
+              hover:bg-blue-700 transform transition duration-200 hover:shadow-lg flex items-center justify-center"
+            disabled={loading}
           >
-            Connect to QuickBooks
-          </button>
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              "Connect to QuickBooks"
+            )}
+          </Button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -70,7 +95,7 @@ export default function Login() {
               href="https://quickbooks.intuit.com/signup"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full block text-center py-3 px-4 bg-green-600 text-white rounded-lg font-medium
+              className="w-full block text-center py-2 px-4 bg-green-600 text-white rounded-lg font-medium
                 hover:bg-green-700 transform transition duration-200 hover:shadow-lg"
             >
               Create QuickBooks Account

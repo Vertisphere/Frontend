@@ -8,7 +8,7 @@ export default function OAuthCallback() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    async function fetchCustomers(idToken: string) {
+    async function authenticate(idToken: string) {
       try {
         const tokenParts = idToken.split(".");
         if (tokenParts.length === 3) {
@@ -21,67 +21,24 @@ export default function OAuthCallback() {
         }
 
         console.log(
-          "Fetching customers with token:",
+          "Authenticating with token:",
           idToken.substring(0, 20) + "...",
         );
 
-        const customersResponse = await fetch(
-          "https://api.ordrport.com/franchiser/qbCustomers",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        console.log("Response status:", customersResponse.status);
-        console.log(
-          "Response headers:",
-          Object.fromEntries(customersResponse.headers.entries()),
-        );
-
-        if (!customersResponse.ok) {
-          const errorText = await customersResponse.text();
-          throw new Error(`Failed to fetch customers: ${errorText}`);
-        }
-
-        if (customersResponse.status === 200) {
-          const responseText = await customersResponse.text();
-          if (!responseText) {
-            console.log("Empty response received, proceeding with navigation");
-            try {
-              sessionStorage.setItem("jwt", idToken);
-              router.replace("/franchiser/orders");
-            } catch (storageError) {
-              console.error("Error storing token:", storageError);
-            }
-            return;
-          }
-
-          try {
-            const customersData = JSON.parse(responseText);
-            console.log("Customers data received:", customersData);
-          } catch (parseError) {
-            console.warn("Could not parse response as JSON:", parseError);
-          }
-
-          try {
-            sessionStorage.setItem("jwt", idToken);
-            // router.replace("/franchiser/orders");
-          } catch (storageError) {
-            console.error("Error storing token:", storageError);
-          }
+        try {
+          sessionStorage.setItem("jwt", idToken);
+          router.replace("/franchiser/orders");
+        } catch (storageError) {
+          console.error("Error storing token:", storageError);
         }
       } catch (error) {
-        console.error("Error in fetchCustomers:", error);
+        console.error("Error in authenticate:", error);
       }
     }
 
-    const providedIdToken = process.env.AUTH_TOKEN;
+    const providedIdToken = sessionStorage.getItem("jwt");
     if (providedIdToken) {
-      fetchCustomers(providedIdToken);
+      authenticate(providedIdToken);
     }
   }, [router, searchParams]);
 

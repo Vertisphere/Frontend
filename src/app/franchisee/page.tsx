@@ -10,6 +10,7 @@ import { auth, db } from "@/config/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 
 const TEST_CREDENTIALS = {
   email: "test@franchisee.com",
@@ -21,6 +22,7 @@ const FranchiseeLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,18 +30,21 @@ const FranchiseeLogin = () => {
     setError("");
 
     try {
+      let userCredential;
       if (isLogin) {
         try {
-          await signInWithEmailAndPassword(auth, email, password);
-          router.push("/franchisee/orders");
+          userCredential = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password,
+          );
         } catch (loginError: any) {
           if (
-            //TODO: how are we checking if the test credentials are being used?
             email === TEST_CREDENTIALS.email &&
             password === TEST_CREDENTIALS.password
           ) {
             try {
-              const userCredential = await createUserWithEmailAndPassword(
+              userCredential = await createUserWithEmailAndPassword(
                 auth,
                 email,
                 password,
@@ -49,29 +54,13 @@ const FranchiseeLogin = () => {
                 createdAt: new Date(),
                 role: "franchisee",
               });
-              router.push("/franchisee/orders");
-              return;
             } catch (createError) {
               console.error("Error creating test account:", createError);
+              return;
             }
-          }
-
-          // test purposes only
-          switch (loginError.code) {
-            case "auth/user-not-found":
-              setError("No account found with this email");
-              break;
-            case "auth/wrong-password":
-              setError("Incorrect password");
-              break;
-            case "auth/invalid-email":
-              setError("Invalid email address");
-              break;
-            case "auth/user-disabled":
-              setError("This account has been disabled");
-              break;
-            default:
-              setError("Failed to sign in. Please try again.");
+          } else {
+            handleAuthError(loginError);
+            return;
           }
         }
       } else {
@@ -82,12 +71,11 @@ const FranchiseeLogin = () => {
 
         const methods = await fetchSignInMethodsForEmail(auth, email);
         if (methods.length > 0) {
-          // how are we checking this?
           setError("An account with this email already exists");
           return;
         }
 
-        const userCredential = await createUserWithEmailAndPassword(
+        userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
           password,
@@ -97,12 +85,72 @@ const FranchiseeLogin = () => {
           createdAt: new Date(),
           role: "franchisee",
         });
-        // idk why it loads franchiser/orders instead of franchisee/orders
-        router.push("/franchisee/orders");
       }
+
+      await fetchAndStoreIdToken();
+      router.push("/franchisee/orders");
     } catch (err: any) {
       console.error("Auth error:", err);
       setError(err.message);
+    }
+  };
+
+  const handleAuthError = (error: any) => {
+    switch (error.code) {
+      case "auth/user-not-found":
+        setError("No account found with this email");
+        break;
+      case "auth/wrong-password":
+        setError("Incorrect password");
+        break;
+      case "auth/invalid-email":
+        setError("Invalid email address");
+        break;
+      case "auth/user-disabled":
+        setError("This account has been disabled");
+        break;
+      default:
+        setError("Failed to sign in. Please try again.");
+    }
+  };
+
+  // what is happening here?
+  // items can not be fetched from qb without idtoken or jwt
+  // currently it uses https://api.ordrport.com/franchiser/qbLogin to get the jwt and stores in the ss to fetch the data
+  const fetchAndStoreIdToken = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://api.ordrport.com/franchiser/qbLogin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            AUTH_CODE: process.env.NEXT_PUBLIC_AUTH_CODE,
+            REALM_ID: process.env.NEXT_PUBLIC_REALM_ID,
+            use_cached_bearer: true,
+          }),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          sessionStorage.setItem("jwt", data.token);
+          router.push("/franchisee/orders");
+        } else {
+          console.error("Authentication failed:", data);
+        }
+      } else {
+        const errorData = await response.text();
+        console.error("Failed to authenticate with QuickBooks:", errorData);
+      }
+    } catch (error) {
+      console.error("Error during authentication:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,7 +194,13 @@ const FranchiseeLogin = () => {
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {isLogin ? "Sign in" : "Sign up"}
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : isLogin ? (
+                "Sign in"
+              ) : (
+                "Sign up"
+              )}
             </Button>
           </div>
         </form>
@@ -164,7 +218,6 @@ const FranchiseeLogin = () => {
         </div>
 
         <div className="mt-4 text-center text-sm text-gray-600">
-          {/* use the test credentials for now */}
           <p>Test Credentials:</p>
           <p>Email: {TEST_CREDENTIALS.email}</p>
           <p>Password: {TEST_CREDENTIALS.password}</p>
